@@ -156,3 +156,6 @@ cython_debug/
 
 # Vim swap files
 **.sw[pon]
+
+# OS Files
+.DS_Store

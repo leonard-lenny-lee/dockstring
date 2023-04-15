@@ -35,7 +35,8 @@ def list_all_target_names(targets_dir: Optional[PathType] = None) -> List[str]:
     """
     if targets_dir is None:
         targets_dir = get_targets_dir()
-    file_names = [f for f in os.listdir(targets_dir) if os.path.isfile(os.path.join(targets_dir, f))]
+    file_names = [f for f in os.listdir(targets_dir)
+                  if os.path.isfile(os.path.join(targets_dir, f))]
 
     target_re = re.compile(r'^(?P<name>\w+)_target\.pdbqt$')
     names = []
@@ -68,7 +69,8 @@ class Target:
         # Directory where the ligand and output files will be saved
         self._custom_working_dir = working_dir
         self._tmp_dir_handle: Optional[tempfile.TemporaryDirectory] = None
-        self.targets_dir: Path = pathlib.Path(targets_dir) if targets_dir else get_targets_dir()
+        self.targets_dir: Path = pathlib.Path(
+            targets_dir) if targets_dir else get_targets_dir()
 
         # Ensure input files exist
         if not all(p.exists() for p in [self.pdbqt_path, self.conf_path]):
@@ -105,12 +107,11 @@ class Target:
 
         return Path(self._tmp_dir_handle.name).resolve()
 
-    def _dock_pdbqt(self, pdbqt_path, log_path, out_path, seed, num_cpus: Optional[int] = None) -> None:
+    def _dock_pdbqt(self, pdbqt_path, out_path, seed, num_cpus: Optional[int] = None) -> None:
         """
         Run AutoDock Vina.
 
         :param pdbqt_path: path to PDBQT file
-        :param log_path: path to log file
         :param out_path: path to output file
         :param seed: random seed
         :param num_cpus: number of CPU cores available to AutoDock Vina
@@ -121,7 +122,6 @@ class Target:
             '--receptor', self.pdbqt_path,
             '--config', self.conf_path,
             '--ligand', pdbqt_path,
-            '--log', log_path,
             '--out', out_path,
             '--seed', str(seed),
         ]
@@ -129,7 +129,8 @@ class Target:
         if num_cpus is not None:
             cmd_list += ['--cpu', str(num_cpus)]
 
-        cmd_return = subprocess.run(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        cmd_return = subprocess.run(
+            cmd_list, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         output = cmd_return.stdout.decode('utf-8')
         logging.debug(output)
 
@@ -158,7 +159,6 @@ class Target:
         # Auxiliary files
         ligand_mol_file = self.working_dir / 'ligand.mol'
         ligand_pdbqt = self.working_dir / 'ligand.pdbqt'
-        vina_logfile = self.working_dir / 'vina.log'
         vina_outfile = self.working_dir / 'vina.out'
         docked_ligand_pdb = self.working_dir / 'docked_ligand.pdb'
 
@@ -189,7 +189,8 @@ class Target:
         # Dock
         write_mol_to_mol_file(refined_mol, ligand_mol_file)
         convert_mol_file_to_pdbqt(ligand_mol_file, ligand_pdbqt)
-        self._dock_pdbqt(ligand_pdbqt, vina_logfile, vina_outfile, seed=seed, num_cpus=num_cpus)
+        self._dock_pdbqt(ligand_pdbqt, vina_outfile,
+                         seed=seed, num_cpus=num_cpus)
 
         # Process docking output
         try:
@@ -197,11 +198,13 @@ class Target:
         except DockingError:
             return None, {}
 
-        convert_pdbqt_to_pdb(pdbqt_file=vina_outfile, pdb_file=docked_ligand_pdb, disable_bonding=True)
+        convert_pdbqt_to_pdb(pdbqt_file=vina_outfile,
+                             pdb_file=docked_ligand_pdb, disable_bonding=True)
         raw_ligand = read_mol_from_pdb(docked_ligand_pdb)
 
         # Assign bond orders and stereochemistry
-        refined_mol_no_hs = Chem.RemoveHs(refined_mol)  # remove Hs as they are not present in the PDBQT file
+        # remove Hs as they are not present in the PDBQT file
+        refined_mol_no_hs = Chem.RemoveHs(refined_mol)
         ligand = assign_bond_orders(subject=raw_ligand, ref=refined_mol_no_hs)
         assign_stereochemistry(ligand)
 
@@ -239,7 +242,8 @@ class Target:
             commands += [
                 pymol_script,
                 '-d', 'view_search_box center_x={center_x}, center_y={center_y}, center_z={center_z}, '
-                      'size_x={size_x}, size_y={size_y}, size_z={size_z}'.format(**conf)
+                      'size_x={size_x}, size_y={size_y}, size_z={size_z}'.format(
+                          **conf)
             ]
             # yapf: enable
 
